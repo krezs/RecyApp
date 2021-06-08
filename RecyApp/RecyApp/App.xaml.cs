@@ -13,7 +13,6 @@ namespace RecyApp
         {
             InitializeComponent();
 
-            DependencyService.Register<MockDataStore>();
             MainPage = new AppShell();
         }
 
