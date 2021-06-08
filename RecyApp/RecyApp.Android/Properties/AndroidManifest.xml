@@ -3,7 +3,6 @@
 	<uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 	<application android:label="RecyApp.Android" android:theme="@style/MainTheme">
 		<meta-data android:name="com.google.android.maps.v2.API_KEY" android:value="AIzaSyDYlE9XILNx0uR1NlJ8LdIREzP4RVplOEA" />
-
 	</application>
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
