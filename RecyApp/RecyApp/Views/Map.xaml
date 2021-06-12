@@ -11,7 +11,7 @@
     
     <ContentPage.Content>
         <StackLayout>
-            <map:Map x:Name="RecyMap" MapType="Street"/>
+            <map:Map x:Name="RecyMap" MapType="Street" IsShowingUser="True" />
         </StackLayout>
     </ContentPage.Content>
 </ContentPage>
