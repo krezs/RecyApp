@@ -25,12 +25,12 @@ namespace RecyApp.Services
         /// <param name="latitude"></param>
         /// <param name="longitude"></param>
         /// <param name="distance"></param>
-        public async Task<List<RecyclingPoint>> GetNearbyPoints(double latitude, double longitude, int distance)
+        public async Task<List<RecyclingPoint>> GetNearbyPoints(double latitude, double longitude, double distance)
         {
             try
             {
                 //var x = $"Latitude: {location.Latitude}, Longitude: {location.Longitude}, Altitude: {location.Altitude}";
-                var url = $"https://puntoslimpios.mma.gob.cl/api/points/geo?lat={latitude}&lng={longitude}&distance=10";
+                var url = $"https://puntoslimpios.mma.gob.cl/api/points/geo?lat={latitude}&lng={longitude}&distance={distance}";
                 //puntoslimpios.mma.gob.cl/api/points/geo?lat=-33.4405632&lng=-70.6614779&distance=20
                 Uri uri = new Uri(string.Format(url, string.Empty));
                 HttpResponseMessage response = await client.GetAsync(uri);

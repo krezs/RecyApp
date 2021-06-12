@@ -36,3 +36,5 @@ Open AppShell.xaml to begin exploring. To learn more about Shell visit: https://
 
 https://docs.microsoft.com/en-us/xamarin/xamarin-forms/user-interface/map/pins
 https://docs.microsoft.com/en-us/xamarin/essentials/get-started?tabs=windows%2Candroid
+https://docs.microsoft.com/en-us/xamarin/xamarin-forms/user-interface/map/pins
+https://docs.microsoft.com/en-us/xamarin/essentials/maps?tabs=android

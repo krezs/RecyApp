@@ -1,4 +1,5 @@
-﻿using RecyApp.Models;
+﻿using Plugin.Geolocator;
+using RecyApp.Models;
 using RecyApp.Services;
 using System;
 using System.Collections.Generic;
@@ -17,13 +18,15 @@ namespace RecyApp.Views
     {
 
         PuntosLimpiosService service;
+        List<RecyclingPoint> RecyclingPoints;
         public Map()
         {
             InitializeComponent();
 
             service = new PuntosLimpiosService();
+            RecyclingPoints = new List<RecyclingPoint>();
             InitMap();
-
+            StartListening();
         }
 
         /// <summary>
@@ -34,40 +37,19 @@ namespace RecyApp.Views
             try
             {
                 //current geolocalitation
-                Location currentLocation = await GetLocationAsync();
+                //Location currentLocation = new Location(-33.444302, -70.653415); // fake location
+                Location currentLocation = await GetLocationAsync(); // get real smartphone location
+
+                //Android.Locations.LocationManager locationManager = (Android.Locations.LocationManager)GetSystemService(Context.LocationService);
+
                 //setting map location to current localitation
                 var mapPosition = new Position(currentLocation.Latitude, currentLocation.Longitude);
                 var mapSpan = MapSpan.FromCenterAndRadius(mapPosition, Distance.FromMeters(500));
                 RecyMap.MoveToRegion(mapSpan);
-                
-                //consumir api
-                //pintar puntos a la redonda desde la primera carga
-
-
-                Pin pin = new Pin
-                {
-                    Label = "Posicion de carga",
-                    Address = "test",
-                    Type = PinType.Place,
-                    Position = mapPosition
-                };
-
 
                 BuildNearbyPoint(currentLocation.Latitude, currentLocation.Longitude, 2);
 
-                
-
-
-                //Pin pin2 = new Pin
-                //{
-                //    Label = "Santa Cruz",
-                //    Address = "The city with a boardwalk",
-                //    Type = PinType.Place,
-                //    Position = new Position(-33.443180, -70.653783)
-                //};
-
-                RecyMap.Pins.Add(pin);
-                //RecyMap.Pins.Add(pin2);
+               
             }
             catch (Exception ex)
             {
@@ -78,13 +60,17 @@ namespace RecyApp.Views
         /// <summary>
         /// 
         /// </summary>
-        private async void BuildNearbyPoint(double lat, double lng, int distance)
+        private async void BuildNearbyPoint(double lat, double lng, double distance)
         {
             try
             {
                 List<RecyclingPoint> recyclingPoints = await service.GetNearbyPoints(lat, lng, distance);
-                foreach (RecyclingPoint item in recyclingPoints)
+                //if (RecyclingPoints.Count == 0) RecyclingPoints = recyclingPoints;
+                //List<RecyclingPoint> pointsToAdd = new List<RecyclingPoint>();
+
+                foreach (var item in recyclingPoints)
                 {
+                    var existingPoint = RecyclingPoints.Where(x => x.lat == item.lat && x.lng == item.lng).FirstOrDefault();
                     Pin pin = new Pin
                     {
                         Label = item.manager,
@@ -92,12 +78,104 @@ namespace RecyApp.Views
                         Type = PinType.Place,
                         Position = new Position(item.lat, item.lng)
                     };
-                    RecyMap.Pins.Add(pin);
+                    if (existingPoint == null)
+                    {
+                        Console.WriteLine("Adding " + item.address_name);
+                        pin.MarkerClicked += Pin_MarkerClicked;
+                        RecyclingPoints.Add(item);
+                        RecyMap.Pins.Add(pin);
+                    }
                 }
+
+
+                var itemsToRemove = RecyclingPoints.Except(recyclingPoints);
+
+                foreach (var item in itemsToRemove)
+                {
+                    var existingPoint = RecyclingPoints.Where(x => x.lat == item.lat && x.lng == item.lng).FirstOrDefault();
+                    if (existingPoint != null)
+                    {
+                        Console.WriteLine("Removing " + item.address_name);
+                        Pin pin = new Pin
+                        {
+                            Label = item.manager,
+                            Address = item.address_name,
+                            Type = PinType.Place,
+                            Position = new Position(item.lat, item.lng)
+                        };
+                        RecyclingPoints.Remove(item);
+                        RecyMap.Pins.Remove(pin);
+                    }
+                }
+
+
+                //foreach (RecyclingPoint item in recyclingPoints)
+                //{
+                //    Pin pin = new Pin
+                //    {
+                //        Label = item.manager,
+                //        Address = item.address_name,
+                //        Type = PinType.Place,
+                //        Position = new Position(item.lat, item.lng)
+                //    };
+                //    pin.MarkerClicked += async (s, args) =>
+                //    {
+                //        args.HideInfoWindow = true;
+                //        string pinName = ((Pin)s).Label;
+                //        await DisplayAlert("Pin Clicked", $"{pinName} was clicked.", "Ok");
+                //    };
+
+                //    RecyMap.Pins.Add(pin);
+                //}
             }
             catch (Exception ex)
             {
                 //handle exception
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void Pin_MarkerClicked(object sender, PinClickedEventArgs e)
+        {
+            e.HideInfoWindow = true;
+            string pinName = ((Pin)sender).Label;
+            await DisplayAlert("Pin Clicked", $"{pinName} was clicked.", "Ok");
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="position"></param>
+        private async Task<System.Collections.Generic.List<Position>> NavigateToPoint(Position position)
+        {
+            try
+            {
+                var location = new Location(position.Latitude, position.Longitude);
+                var options = new MapLaunchOptions { NavigationMode = NavigationMode.Walking };
+
+                var googleDirection = await GoogleApiService.ServiceClientInstance.GetDirections(-33.444302, -70.653415, position.Latitude, position.Longitude);
+                if (googleDirection.Routes != null && googleDirection.Routes.Count > 0)
+                {
+                    var positions = (Enumerable.ToList(PolylineHelper.Decode(googleDirection.Routes.First().OverviewPolyline.Points)));
+                    return positions;
+                }
+                else
+                {
+                    await App.Current.MainPage.DisplayAlert("Alert", "Add your payment method inside the Google Maps console.", "Ok");
+                    return null;
+
+                }
+                // await RecyMap.OpenAsync(location, options);
+                //await Map.OpenAsync(location, options);
+            }
+            catch (Exception)
+            {
+
+                throw;
             }
         }
 
@@ -110,6 +188,7 @@ namespace RecyApp.Views
             try
             {
                 var location = await Geolocation.GetLastKnownLocationAsync();
+
 
                 if (location != null)
                 {
@@ -134,6 +213,37 @@ namespace RecyApp.Views
                 // Unable to get location
             }
             return null;
+        }
+
+        async Task StartListening()
+        {
+            await CrossGeolocator.Current.StartListeningAsync(TimeSpan.FromSeconds(5), 10, true, new Plugin.Geolocator.Abstractions.ListenerSettings
+            {
+                ActivityType = Plugin.Geolocator.Abstractions.ActivityType.AutomotiveNavigation,
+                AllowBackgroundUpdates = true,
+                DeferLocationUpdates = true,
+                DeferralDistanceMeters = 1,
+                DeferralTime = TimeSpan.FromSeconds(1),
+                ListenForSignificantChanges = true,
+                PauseLocationUpdatesAutomatically = false
+            });
+
+            CrossGeolocator.Current.PositionChanged += Current_PositionChanged;
+        }
+
+        private void Current_PositionChanged(object sender, Plugin.Geolocator.Abstractions.PositionEventArgs e)
+        {
+            var test = e.Position;
+            Console.WriteLine("Full: Lat: " + test.Latitude.ToString() + " Long: " + test.Longitude.ToString());
+            Console.WriteLine($"Time: {test.Timestamp.ToString()}");
+            Console.WriteLine($"Heading: {test.Heading.ToString()}");
+            Console.WriteLine($"Speed: {test.Speed.ToString()}");
+            Console.WriteLine($"Accuracy: {test.Accuracy.ToString()}");
+            Console.WriteLine($"Altitude: {test.Altitude.ToString()}");
+            Console.WriteLine($"AltitudeAccuracy: {test.AltitudeAccuracy.ToString()}");
+
+            BuildNearbyPoint(test.Latitude, test.Longitude, 2);
+
         }
     }
 }
